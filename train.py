@@ -72,7 +72,6 @@ if __name__ == '__main__':
     loss_func = MSSLoss(args.loss.n_ffts)
 
     # device
-    args.device = 'cuda' if torch.cuda.is_available() else 'cpu'
     if args.device == 'cuda':
         torch.cuda.set_device(args.env.gpu_id)
     model.to(args.device)
