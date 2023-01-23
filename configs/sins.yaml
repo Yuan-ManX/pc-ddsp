@@ -1,0 +1,28 @@
+data: 
+  f0_extractor: 'parselmouth' # 'parselmouth' or 'dio' or 'harvest'
+  sampling_rate: 44100
+  win_length: 2048
+  block_size: 512 # Equal to hop_length
+  n_mels: 160
+  mel_fmin: 0
+  mel_fmax: 22050
+  duration: 2 # Audio duration during training, must be less than the duration of the shortest audio clip
+  train_path: data/train # Create a folder named "audio" under this path and put the audio clip in it
+  valid_path: data/val # Create a folder named "audio" under this path and put the audio clip in it
+model:
+  type: 'Sins'
+  n_mag_noise: 256
+  n_harmonics: 128
+loss:
+  n_ffts: [2048, 1024, 512, 256]
+device: cuda
+env:
+  expdir: exp/sins-test
+  gpu_id: 0
+train:
+  batch_size: 36
+  epochs: 100000
+  interval_log: 1
+  interval_val: 1000
+  lr: 0.0005
+  max_upsample_dim: 32 # Save memory for a small number, but may be slow if too small
