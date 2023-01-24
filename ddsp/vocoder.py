@@ -191,7 +191,7 @@ class Full(torch.nn.Module):
                         harmonic_low,
                         src_param)
                         
-        harmonic_high, final_phase = self.harmonic_synthsizer_low(
+        harmonic_high, final_phase = self.harmonic_synthsizer_high(
                                             f0, 
                                             amplitudes[:,:,self.n_sub_harmonics:], 
                                             initial_phase, 
