@@ -91,7 +91,7 @@ class Audio2Mel(torch.nn.Module):
         self.win_length = win_length
         self.sampling_rate = sampling_rate
         self.n_mel_channels = n_mel_channels
-        self.clamp = 1e-5
+        self.clamp = clamp
 
     def forward(self, audio):
         '''
