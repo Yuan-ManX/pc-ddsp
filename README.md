@@ -61,7 +61,7 @@ tensorboard --logdir=exp
 ```bash
 # Copy-synthesising test
 # wav -> mel, f0 -> wav
-python main.py -i <input.wav> -m <model_file.pt> -o <output.wav> -k <keychange (semitones)>
+python main.py -i <input.wav> -m <model_file.pt> -o <output.wav>
 ```
 ```bash
 # Pitch-shifting test
