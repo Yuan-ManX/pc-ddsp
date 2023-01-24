@@ -34,6 +34,10 @@ for a model of substractive synthesis only.
 
 You can modify the configuration file `config/<model_name>.yaml` before preprocessing. The default configuration during training is 44.1khz sampling rate audio for about a few hours and GTX1660 graphics card.
 
+NOTE 1: Please keep the sampling rate of all audio clips consistent with the sampling rate in the yaml configuration file ! If it is not consistent, the program can be executed safely, but the resampling during the training process will be very slow.
+
+NOTE 2: The total number of audio clips is recommended to be more than 1000, especially long audio clip can be cut into short segments, which will speed up the training, but the duration of all audio clips should not be less than 2 seconds.
+
 ## 3. Training
 ```bash
 # train a full model as an example
