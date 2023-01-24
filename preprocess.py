@@ -5,11 +5,13 @@ import torch
 import pyworld as pw
 import parselmouth
 import argparse
+import shutil
 from logger import utils
 from tqdm import tqdm
 from ddsp.vocoder import Audio2Mel
 from librosa.filters import mel as librosa_mel_fn
 from logger.utils import traverse_dir
+import concurrent.futures
 
 def parse_args(args=None, namespace=None):
     """Parse command-line arguments."""
@@ -26,6 +28,7 @@ def preprocess(
         path_srcdir, 
         path_meldir,
         path_f0dir,
+        path_skipdir,
         device,
         f0_extractor,
         sampling_rate,
@@ -54,9 +57,8 @@ def preprocess(
         clamp=1e-6).to(device)
 
     # run
-    print('Preprocess the audio clips in :', path_srcdir)
-    for idx, file in tqdm(enumerate(filelist), total=len(filelist)):
-        
+    
+    def process(file):
         ext = file.split('.')[-1]
         binfile = file[:-(len(ext)+1)]+'.npy'
         path_srcfile = os.path.join(path_srcdir, file)
@@ -70,12 +72,8 @@ def preprocess(
 
         # extract mel
         m_t = mel_extractor(x_t)
-
-        # save npy
-        os.makedirs(os.path.dirname(path_melfile), exist_ok=True)
         mel = m_t.squeeze().to('cpu').numpy()
-        np.save(path_melfile, mel)
-        
+
         # extract f0 using parselmouth
         if f0_extractor == 'parselmouth':
             f0 = parselmouth.Sound(x, sampling_rate).to_pitch_ac(
@@ -111,16 +109,37 @@ def preprocess(
         else:
             raise ValueError(f" [x] Unknown f0 extractor: {f0_extractor}")
                
-        # interpolate the unvoiced f0
         uv = f0 == 0
-        f0[uv] = np.interp(np.where(uv)[0], np.where(~uv)[0], f0[~uv])
+        if len(f0[~uv]) > 0:
+            # interpolate the unvoiced f0
+            f0[uv] = np.interp(np.where(uv)[0], np.where(~uv)[0], f0[~uv])
+            # save npy
+            os.makedirs(path_meldir, exist_ok=True)
+            np.save(path_melfile, mel)
+            os.makedirs(path_f0dir, exist_ok=True)
+            np.save(path_f0file, f0)
+        else:
+            print('\n[Error] F0 extraction failed: ' + path_srcfile)
+            os.makedirs(path_skipdir, exist_ok=True)
+            shutil.move(path_srcfile, path_skipdir)
+            print('This file has been moved to ' + os.path.join(path_skipdir, file))
+    print('Preprocess the audio clips in :', path_srcdir)
+    
+    # single process
+    for file in tqdm(filelist, total=len(filelist)):
+        process(file)
+    
+    # multi-process
+    '''
+    with concurrent.futures.ProcessPoolExecutor(max_workers=2) as executor:
+        list(tqdm(executor.map(process, filelist), total=len(filelist)))
+    '''
         
-        # save npy
-        os.makedirs(os.path.dirname(path_f0file), exist_ok=True)
-        np.save(path_f0file, f0)
+        
         
 if __name__ == '__main__':
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    device = 'cpu'
     
     # parse commands
     cmd = parse_args()
@@ -142,10 +161,12 @@ if __name__ == '__main__':
         path_srcdir  = os.path.join(path, 'audio')
         path_meldir  = os.path.join(path, 'mel')
         path_f0dir  = os.path.join(path, 'f0')
+        path_skipdir = os.path.join(path, 'skip')
         preprocess(
             path_srcdir, 
             path_meldir, 
             path_f0dir,
+            path_skipdir,
             device,
             f0_extractor,
             sampling_rate,
