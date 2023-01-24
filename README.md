@@ -36,7 +36,9 @@ You can modify the configuration file `config/<model_name>.yaml` before preproce
 
 NOTE 1: Please keep the sampling rate of all audio clips consistent with the sampling rate in the yaml configuration file ! If it is not consistent, the program can be executed safely, but the resampling during the training process will be very slow.
 
-NOTE 2: The total number of audio clips is recommended to be more than 1000, especially long audio clip can be cut into short segments, which will speed up the training, but the duration of all audio clips should not be less than 2 seconds.
+NOTE 2: The total number of the audio clips for training dataset is recommended to be more than 1000, especially long audio clip can be cut into short segments, which will speed up the training, but the duration of all audio clips should not be less than 2 seconds.
+
+NOTE 3: The total number of the audio clips for validation dataset is recommended to be about 10, please don't put too many or it will be very slow to do the validation.
 
 ## 3. Training
 ```bash
