@@ -50,7 +50,8 @@ def preprocess(
         n_mel_channels=n_mel_channels,
         win_length=win_length,
         mel_fmin=mel_fmin,
-        mel_fmax=mel_fmax).to(device)
+        mel_fmax=mel_fmax,
+        clamp=1e-6).to(device)
 
     # run
     print('Preprocess the audio clips in :', path_srcdir)
