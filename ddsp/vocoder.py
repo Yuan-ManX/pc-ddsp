@@ -72,6 +72,7 @@ class Audio2Mel(torch.nn.Module):
         n_fft=None,
         mel_fmin=0,
         mel_fmax=None,
+        clamp = 1e-5
     ):
         super().__init__()
         n_fft = win_length if n_fft is None else n_fft
@@ -90,6 +91,7 @@ class Audio2Mel(torch.nn.Module):
         self.win_length = win_length
         self.sampling_rate = sampling_rate
         self.n_mel_channels = n_mel_channels
+        self.clamp = 1e-5
 
     def forward(self, audio):
         '''
@@ -109,7 +111,7 @@ class Audio2Mel(torch.nn.Module):
         real_part, imag_part = fft.unbind(-1)
         magnitude = torch.sqrt(real_part ** 2 + imag_part ** 2)
         mel_output = torch.matmul(self.mel_basis, magnitude)
-        log_mel_spec = torch.log10(torch.clamp(mel_output, min=1e-5))
+        log_mel_spec = torch.log10(torch.clamp(mel_output, min=self.clamp))
 
         # log_mel_spec: B x C, M, T
         T_ = log_mel_spec.shape[-1]
