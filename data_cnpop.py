@@ -160,7 +160,8 @@ class AudioDataset(Dataset):
         if self.volume_aug:
             log10_mel_shift = random.uniform(-1,1)
             audio *= (10 ** log10_mel_shift)
-            audio_mel = torch.clamp(audio_mel + log10_mel_shift, min=-5)
+            audio_mel += log10_mel_shift
+        audio_mel = torch.clamp(audio_mel, min=-5)
         
         return dict(audio=audio, f0=f0_hz, mel=audio_mel, name=name)
 
