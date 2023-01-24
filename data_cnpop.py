@@ -115,7 +115,7 @@ class AudioDataset(Dataset):
             sr=self.sample_rate)
             
         if duration < (self.waveform_sec + 0.1):
-            return self.__getitem__(file_idx+1)
+            return self.__getitem__( (file_idx + 1) % len(self.paths))
         
         # get item
         return self.get_data(name, duration)
