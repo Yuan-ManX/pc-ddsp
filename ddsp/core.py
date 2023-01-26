@@ -111,8 +111,7 @@ def crop_and_compensate_delay(audio, audio_size, ir_size,
   # the group delay is constant because the filter is linear phase.
   total_size = int(audio.shape[-1])
   crop = total_size - crop_size
-  start = ((ir_size - 1) // 2 -
-           1 if delay_compensation < 0 else delay_compensation)
+  start = ((ir_size + 1) // 2 if delay_compensation < 0 else delay_compensation)
   end = crop - start
   return audio[:, start:-end]
   
@@ -200,7 +199,7 @@ def fft_convolve(audio,
     audio_ir_fft = torch.multiply(audio_fft, ir_fft)
 
     # Take the IFFT to resynthesize audio.
-    audio_frames_out = torch.fft.irfft(audio_ir_fft)
+    audio_frames_out = torch.fft.irfft(audio_ir_fft, fft_size)
     
     # Overlap Add
     frame_size = audio_frames_out.size(-1)
@@ -291,8 +290,8 @@ def frequency_impulse_response(magnitudes,
     """
     # Get the IR (zero-phase form).
     
-    magnitudes = torch.complex(magnitudes, torch.zeros_like(magnitudes))
-    impulse_response = torch.fft.irfft(magnitudes)
+    magnitudes = torch.complex(magnitudes, torch.zeros_like(magnitudes)) # B, n_frames, n_mags
+    impulse_response = torch.fft.irfft(magnitudes) # B, n_frames, 2*(n_mags-1)
     
     #print ("impulse response size here:", impulse_response[0,0, :5], impulse_response[0,0, -5:])
 
