@@ -116,7 +116,7 @@ def crop_and_compensate_delay(audio, audio_size, ir_size,
   return audio[:, start:-end]
   
 def fft_convolve(audio,
-                 impulse_response,
+                 impulse_response, # B, n_frames, 2*(n_mags-1)
                  padding = 'same',
                  delay_compensation = -1,
                  mel_scale_noise = False):
@@ -156,7 +156,7 @@ def fft_convolve(audio,
 
     # Add a frame dimension to impulse response if it doesn't have one.
     #ir_shape = impulse_response.shape.as_list()
-    ir_shape = impulse_response.size()
+    ir_shape = impulse_response.size() 
     if len(ir_shape) == 2:
         impulse_response = impulse_response.unsqueeze(1)
         #ir_shape = impulse_response.shape.as_list()
@@ -164,37 +164,29 @@ def fft_convolve(audio,
 
     # Get shapes of audio and impulse response.
     batch_size_ir, n_ir_frames, ir_size = ir_shape
-    batch_size, audio_size = audio.size()#shape.as_list()
+    batch_size, audio_size = audio.size() # B, T
 
     # Validate that batch sizes match.
     if batch_size != batch_size_ir:
         raise ValueError('Batch size of audio ({}) and impulse response ({}) must '
                         'be the same.'.format(batch_size, batch_size_ir))
 
-    # Cut audio into frames.
-    frame_size = int(np.ceil(audio_size / n_ir_frames))
-    hop_size = frame_size
-    
-    # audio --> batch, time_step
+    # Cut audio into 50% overlapped frames (center padding).
+    hop_size = int(audio_size / n_ir_frames)
+    frame_size = 2 * hop_size
     unfold = torch.nn.Unfold(kernel_size=(1, frame_size), stride=(1, hop_size))
-    audio_frames = unfold(audio.unsqueeze(1).unsqueeze(1)).transpose(1, 2)
-    # Check that number of frames match.
-    #print ("audio_frames here:", audio_frames.size())
-    n_audio_frames = int(audio_frames.shape[1])
-
-    if n_audio_frames != n_ir_frames:
-        raise ValueError(
-            'Number of Audio frames ({}) and impulse response frames ({}) do not '
-            'match. For small hop size = ceil(audio_size / n_ir_frames), '
-            'number of impulse response frames must be a multiple of the audio '
-            'size.'.format(n_audio_frames, n_ir_frames))
+    audio_frames = unfold(F.pad(audio, (hop_size, hop_size)).unsqueeze(1).unsqueeze(1)).transpose(1, 2) # B, n_frames+1, 2*hop_size
+    
+    # Apply Bartlett (triangular) window
+    window = torch.bartlett_window(frame_size).to(audio_frames)
+    audio_frames *= window
     
     # Pad and FFT the audio and impulse responses.
     fft_size = get_fft_size(frame_size, ir_size, power_of_2=False)
     
     audio_fft = torch.fft.rfft(audio_frames, fft_size)
 
-    ir_fft = torch.fft.rfft(impulse_response, fft_size)
+    ir_fft = torch.fft.rfft(torch.cat((impulse_response,impulse_response[:,-1:,:]),1), fft_size)
     # Multiply the FFTs (same as convolution in time).
     audio_ir_fft = torch.multiply(audio_fft, ir_fft)
 
@@ -202,12 +194,12 @@ def fft_convolve(audio,
     audio_frames_out = torch.fft.irfft(audio_ir_fft, fft_size)
     
     # Overlap Add
-    frame_size = audio_frames_out.size(-1)
+    batch_size, n_audio_frames, frame_size = audio_frames_out.size() # # B, n_frames+1, 2*(hop_size+n_mags-1)-1
     fold = torch.nn.Fold(output_size=(1, (n_audio_frames - 1) * hop_size + frame_size),kernel_size=(1, frame_size),stride=(1, hop_size))
     output_signal = fold(audio_frames_out.transpose(1, 2)).squeeze(1).squeeze(1)
     
     # Crop and shift the output audio.
-    output_signal = crop_and_compensate_delay(output_signal, audio_size, ir_size, padding, delay_compensation)
+    output_signal = crop_and_compensate_delay(output_signal[:,hop_size:], audio_size, ir_size, padding, delay_compensation)
     return output_signal
     
 
