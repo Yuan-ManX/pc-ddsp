@@ -158,7 +158,9 @@ class AudioDataset(Dataset):
         
         # volume augmentation
         if self.volume_aug:
-            log10_mel_shift = random.uniform(-1,1)
+            max_amp = float(torch.max(torch.abs(audio))) + 1e-5
+            max_shift = min(1, np.log10(1/max_amp))
+            log10_mel_shift = random.uniform(-1, max_shift)
             audio *= (10 ** log10_mel_shift)
             audio_mel += log10_mel_shift
         audio_mel = torch.clamp(audio_mel, min=-5)
